@@ -5,11 +5,14 @@ namespace Channnel
 {
     class Program
     {
-        static readonly Channel<int> OddChannel = new Channel<int>(2);
-        static readonly Channel<int> EvenChannel = new Channel<int>(2);
+        static readonly Channel<int> OddChannel = new Channel<int>("Odd Channel", true);
+        static readonly Channel<int> EvenChannel = new Channel<int>("Even Channel", true);
 
         private const int Limit = 7000;
 
+        /// <summary>
+        /// Printing fib series using channel
+        /// </summary>
         static void Main()
         {
             Task.Factory.StartNew(() =>
@@ -23,8 +26,10 @@ namespace Channnel
             });
 
             Console.ReadKey();
-            
+
         }
+
+       
 
         private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
@@ -67,7 +72,5 @@ namespace Channnel
                 }
             }
         }
-
-
     }
 }

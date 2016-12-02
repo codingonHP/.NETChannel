@@ -1,45 +1,65 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Channnel
 {
-    public enum ChannelBehavior
-    {
-        RemoveOnRead,
-        RetainOnRead,
-        ExpandChannelOnNeed
-    }
-
     public class Channel<T> : IDisposable
     {
+        #region Private
         private readonly int _buffer;
         private readonly ChannelBehavior _channelBehavior;
         private Queue<T> _dataPool = new Queue<T>();
+        #endregion
 
-        public event Action<object, ChannelArgs<T>> DataWritten;
-        public event Action<object, ChannelArgs<T>> DataRead;
+        #region Public
+        public string Name { get; set; }
         public bool DataAvailable { get; private set; }
         public bool ChannelOpen { get; private set; }
+        public bool DebugInfo { get; }
+        #endregion
 
-        public Channel(int buffer, ChannelBehavior channelBehavior)
+        #region Events
+        public event Action<object, ChannelArgs<T>> DataWritten;
+        public event Action<object, ChannelArgs<T>> DataRead;
+        #endregion
+
+        #region Constructor
+        public Channel(int buffer, ChannelBehavior channelBehavior, bool printDebugLogs, string name)
         {
             _buffer = buffer;
             _channelBehavior = channelBehavior;
+            DebugInfo = printDebugLogs;
+            Name = name;
+
             ChannelOpen = true;
 
             if (_channelBehavior == ChannelBehavior.ExpandChannelOnNeed)
             {
                 _buffer = -1;
             }
+
+            if (DebugInfo)
+            {
+                PrintDebugInfo();
+            }
         }
-
+        public Channel(int buffer, ChannelBehavior channelBehavior, bool printDebugLogs) : this(buffer, channelBehavior, printDebugLogs, string.Empty) { }
         public Channel() : this(ChannelBehavior.RemoveOnRead) { }
+        public Channel(bool printDebugInfo) : this(1, ChannelBehavior.RemoveOnRead, printDebugInfo) { }
+        public Channel(ChannelBehavior channelBehavior) : this(1, channelBehavior, false) { }
+        public Channel(int buffer) : this(buffer, ChannelBehavior.RemoveOnRead, false) { }
+        public Channel(int buffer, string name) : this(buffer, ChannelBehavior.RemoveOnRead, false, name) { }
+        public Channel(string name) : this(1, ChannelBehavior.RemoveOnRead, false, name) { }
+        public Channel(string name, bool printDebugInfo) : this(1, ChannelBehavior.RemoveOnRead, printDebugInfo, name) { }
+        public Channel(ChannelBehavior channelBehavior, bool printDebugLogs, string name) : this(1, channelBehavior, printDebugLogs, name) { }
+        public Channel(int buffer, bool printDebugLogs, string name) : this(buffer, ChannelBehavior.RemoveOnRead, printDebugLogs, name) { }
 
-        public Channel(ChannelBehavior channelBehavior): this(1, channelBehavior) { }
 
-        public Channel(int buffer) : this(buffer,ChannelBehavior.RemoveOnRead) { }
-      
 
+        #endregion
+
+        #region Methods
         public void Write(T data)
         {
             if (!ChannelOpen)
@@ -50,11 +70,19 @@ namespace Channnel
             if (CanWrite())
             {
                 _dataPool.Enqueue(data);
-                OnDataWritten(this, new ChannelArgs<T> { Data = data });
+                var channelArgs = new ChannelArgs<T>
+                {
+                    Data = data,
+                    SenderId = Thread.CurrentThread.ManagedThreadId.ToString(),
+                    Operation = "Write",
+                    Name = Name
+                };
+
+                OnDataWritten(this, channelArgs);
             }
         }
 
-        private bool CanWrite()
+        public bool CanWrite()
         {
             if (_buffer == -1)
             {
@@ -91,12 +119,19 @@ namespace Channnel
                     break;
             }
 
-            OnDataRead(this, new ChannelArgs<T> { Data = data });
+            var channelArgs = new ChannelArgs<T>
+            {
+                Data = data,
+                SenderId = Thread.CurrentThread.ManagedThreadId.ToString(),
+                Operation = "Read",
+                Name = Name
+            };
+            OnDataRead(this, channelArgs);
 
             return data;
         }
 
-        public void Close()
+        public virtual void Close()
         {
             ChannelOpen = false;
             Dispose();
@@ -117,12 +152,25 @@ namespace Channnel
         public void Dispose()
         {
             _dataPool = null;
+            DataWritten = null;
+            DataRead = null;
         }
-    }
 
-    public class ChannelArgs<T> : EventArgs
-    {
-        public T Data { get; set; }
-        public Guid SenderId { get; set; }
+        private void PrintDebugInfo()
+        {
+            DataWritten += (sender, args) =>
+            {
+                Console.WriteLine($"Data {args.Operation} by {args.Name} ({args.SenderId}), data: {args.Data}");
+            };
+
+            DataRead += (sender, args) =>
+            {
+                Console.WriteLine($"Data {args.Operation} by {args.Name} ({args.SenderId}), data: {args.Data}");
+            };
+        }
+
+
+        #endregion
+
     }
 }
