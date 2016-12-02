@@ -1,15 +1,73 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Channnel
 {
     class Program
     {
-        static void Main(string[] args)
+        static readonly Channel<int> OddChannel = new Channel<int>(2);
+        static readonly Channel<int> EvenChannel = new Channel<int>(2);
+
+        private const int Limit = 7000;
+
+        static void Main()
         {
+            Task.Factory.StartNew(() =>
+            {
+                DoOddSum(OddChannel, EvenChannel);
+            });
+
+            Task.Factory.StartNew(() =>
+            {
+                DoEvenSum(OddChannel, EvenChannel);
+            });
+
+            Console.ReadKey();
+            
         }
+
+        private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
+        {
+            var lastSavedData = 0;
+            var nextData = oddChannel.Read();
+
+            while (true)
+            {
+                nextData = lastSavedData + nextData;
+                Console.WriteLine(nextData);
+                lastSavedData = nextData;
+
+                evenChannel.Write(nextData);
+                nextData = oddChannel.Read();
+
+                if (nextData > Limit)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static void DoOddSum(Channel<int> oddChannel, Channel<int> evenChannel)
+        {
+            var nextData = 1;
+            while (true)
+            {
+                Console.WriteLine(nextData);
+
+                oddChannel.Write(nextData);
+                var lastSavedData = nextData;
+
+                nextData = evenChannel.Read();
+                nextData = lastSavedData + nextData;
+
+
+                if (nextData > Limit)
+                {
+                    break;
+                }
+            }
+        }
+
+
     }
 }
