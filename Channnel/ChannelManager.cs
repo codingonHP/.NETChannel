@@ -12,13 +12,11 @@ namespace Channnel
         public event Action<object, ClientArgs> ClientAdded;
         public event Action<object, ClientArgs> ClientRemoved;
 
-        public void AddNewClient(InvocationScope invocationScope)
+        public void AddNewInvocationScope(InvocationScope invocationScope)
         {
             lock (LockSwitch)
             {
-                var isConfigValid = ValidateClientConfig(invocationScope);
-
-                if (!ClientExists(invocationScope.ThreadId) && isConfigValid)
+                if (!ClientExists(invocationScope.ThreadId))
                 {
                     var client = new Client();
                     client.InvocationScopes.Add(invocationScope);
@@ -34,12 +32,7 @@ namespace Channnel
                     return;
                 }
 
-                if (!isConfigValid)
-                {
-                    throw new InvalidOperationException($"cannot add new client. Please check your client config");
-                }
-
-                //client doesn't exist and configuration is also valid.
+                //client doesn't exist
 
                 var savedClient = GetClient(invocationScope.ThreadId);
                 savedClient.InvocationScopes.Add(invocationScope);

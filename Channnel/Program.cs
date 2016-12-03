@@ -16,6 +16,7 @@ namespace Channnel
         /// </summary>
         static void Main()
         {
+
             Task.Factory.StartNew(() =>
             {
                 DoOddSum(OddChannel, EvenChannel);
@@ -32,8 +33,8 @@ namespace Channnel
 
         private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            //oddChannel.RegisterClient(new InvocationScope { InvocationScopeName  = "DoEvenSum", ReadOnly = true });
-            //evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoEvenSum", WriteOnly = true });
+            oddChannel.ConfigureChannelUse(new InvocationScope { InvocationScopeName = "DoEvenSum", ReadOnly = true });
+            evenChannel.ConfigureChannelUse(new InvocationScope { InvocationScopeName = "DoEvenSum", WriteOnly = true });
 
             var lastSavedData = 0;
             var nextData = oddChannel.Read("DoEvenSum");
@@ -62,8 +63,8 @@ namespace Channnel
 
         private static void DoOddSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            //oddChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", WriteOnly = true });
-            //evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", ReadOnly = true });
+            oddChannel.ConfigureChannelUse(new InvocationScope { InvocationScopeName = "DoOddSum", WriteOnly = true});
+            evenChannel.ConfigureChannelUse(new InvocationScope { InvocationScopeName = "DoOddSum", ReadOnly = true });
 
             var nextData = 1;
             while (true)

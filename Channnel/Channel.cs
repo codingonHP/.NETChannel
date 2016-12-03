@@ -149,13 +149,14 @@ namespace Channnel
             Dispose();
         }
 
-        public void RegisterClient(InvocationScope invocationScope)
+        public void ConfigureChannelUse(InvocationScope invocationScope)
         {
+            invocationScope.ValidateSettings();
             invocationScope.ThreadId = Thread.CurrentThread.ManagedThreadId.ToString();
-            _channelManager.AddNewClient(invocationScope);
+            _channelManager.AddNewInvocationScope(invocationScope);
         }
 
-        public void UnRegisterClient()
+        public void RemoveChannelConfiguration()
         {
             _channelManager.RemoveClient(Thread.CurrentThread.ManagedThreadId.ToString());
         }
