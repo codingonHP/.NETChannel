@@ -34,6 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -46,6 +47,11 @@
     <Compile Include="Channel.cs" />
     <Compile Include="ChannelArgs.cs" />
     <Compile Include="ChannelBehavior.cs" />
+    <Compile Include="ChannelConfig.cs" />
+    <Compile Include="ChannelManager.cs" />
+    <Compile Include="Client.cs" />
+    <Compile Include="ClientConfig.cs" />
+    <Compile Include="IChannelManager.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

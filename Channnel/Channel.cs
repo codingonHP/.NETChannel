@@ -8,15 +8,33 @@ namespace Channnel
     {
         #region Private
         private readonly int _buffer;
-        private readonly ChannelBehavior _channelBehavior;
+        private bool _debugInfo;
+
         private Queue<T> _dataPool = new Queue<T>();
+        private readonly ChannelBehavior _channelBehavior;
+        private readonly ChannelManager _channelManager = new ChannelManager();
         #endregion
 
         #region Public
         public string Name { get; set; }
         public bool DataAvailable { get; private set; }
         public bool ChannelOpen { get; private set; }
-        public bool DebugInfo { get; }
+        public bool DebugInfo
+        {
+            get { return _debugInfo; }
+            set
+            {
+                _debugInfo = value;
+                if (_debugInfo)
+                {
+                    RegisterPrintDebugInfo();
+                }
+                else
+                {
+                    DeRegisterPrintDebugInfo();
+                }
+            }
+        }
         #endregion
 
         #region Events
@@ -25,84 +43,47 @@ namespace Channnel
         #endregion
 
         #region Constructor
-        public Channel(int buffer, ChannelBehavior channelBehavior, bool printDebugLogs, string name)
+        public Channel(string name, int buffer, ChannelBehavior channelBehavior, bool printDebugLogs)
         {
             _buffer = buffer;
             _channelBehavior = channelBehavior;
+
             DebugInfo = printDebugLogs;
             Name = name;
-
             ChannelOpen = true;
 
             if (_channelBehavior == ChannelBehavior.ExpandChannelOnNeed)
             {
                 _buffer = -1;
             }
-
-            if (DebugInfo)
-            {
-                PrintDebugInfo();
-            }
         }
-        public Channel(int buffer, ChannelBehavior channelBehavior, bool printDebugLogs) : this(buffer, channelBehavior, printDebugLogs, string.Empty) { }
-        public Channel() : this(ChannelBehavior.RemoveOnRead) { }
-        public Channel(bool printDebugInfo) : this(1, ChannelBehavior.RemoveOnRead, printDebugInfo) { }
-        public Channel(ChannelBehavior channelBehavior) : this(1, channelBehavior, false) { }
-        public Channel(int buffer) : this(buffer, ChannelBehavior.RemoveOnRead, false) { }
-        public Channel(int buffer, string name) : this(buffer, ChannelBehavior.RemoveOnRead, false, name) { }
-        public Channel(string name) : this(1, ChannelBehavior.RemoveOnRead, false, name) { }
-        public Channel(string name, bool printDebugInfo) : this(1, ChannelBehavior.RemoveOnRead, printDebugInfo, name) { }
-        public Channel(ChannelBehavior channelBehavior, bool printDebugLogs, string name) : this(1, channelBehavior, printDebugLogs, name) { }
-        public Channel(int buffer, bool printDebugLogs, string name) : this(buffer, ChannelBehavior.RemoveOnRead, printDebugLogs, name) { }
 
+        public Channel(ChannelConfig config) : this(config.Name,
+                                                   config.Buffer,
+                                                   config.ChannelBehavior,
+                                                   config.PrintDebugLogs)
+        {
+           
+        }
 
+        public Channel() : this(name: string.Empty, buffer: 0, channelBehavior: ChannelBehavior.RemoveOnRead, printDebugLogs: false) { }
+
+        public Channel(string name) : this(name: name, buffer: 0, channelBehavior: ChannelBehavior.RemoveOnRead, printDebugLogs: false) { }
 
         #endregion
 
         #region Methods
-        public void Write(T data)
-        {
-            if (!ChannelOpen)
-            {
-                throw new InvalidOperationException("Reading from closed channel");
-            }
-
-            if (CanWrite())
-            {
-                _dataPool.Enqueue(data);
-                var channelArgs = new ChannelArgs<T>
-                {
-                    Data = data,
-                    SenderId = Thread.CurrentThread.ManagedThreadId.ToString(),
-                    Operation = "Write",
-                    Name = Name
-                };
-
-                OnDataWritten(this, channelArgs);
-            }
-        }
-
-        public bool CanWrite()
-        {
-            if (_buffer == -1)
-            {
-                //infinite buffer size
-                return true;
-            }
-
-            if (_buffer > 0)
-            {
-                return _dataPool.Count < _buffer;
-            }
-
-            return false;
-        }
-
         public virtual T Read()
         {
+            var thisClient = _channelManager.GetClientConfig(Thread.CurrentThread.ManagedThreadId.ToString());
             if (!ChannelOpen)
             {
                 throw new InvalidOperationException("Reading from closed channel");
+            }
+
+            if (thisClient?.WriteOnly == true)
+            {
+                throw new InvalidOperationException("Cannot read from write only channel");
             }
 
             T data = default(T);
@@ -131,10 +112,76 @@ namespace Channnel
             return data;
         }
 
+        public void Write(T data)
+        {
+            var thisClient = _channelManager.GetClientConfig(Thread.CurrentThread.ManagedThreadId.ToString());
+
+            if (!ChannelOpen)
+            {
+                throw new InvalidOperationException("Reading from closed channel");
+            }
+
+            if (thisClient?.ReadOnly == true)
+            {
+                throw new InvalidOperationException("Cannot write to readonly channel");
+            }
+
+            if (CanWrite())
+            {
+                _dataPool.Enqueue(data);
+                var channelArgs = new ChannelArgs<T>
+                {
+                    Data = data,
+                    SenderId = Thread.CurrentThread.ManagedThreadId.ToString(),
+                    Operation = "Write",
+                    Name = Name
+                };
+
+                OnDataWritten(this, channelArgs);
+            }
+        }
+
         public virtual void Close()
         {
             ChannelOpen = false;
             Dispose();
+        }
+
+        public void RegisterClient(ClientConfig config)
+        {
+            Client client = new Client
+            {
+                ClientConfig = config,
+                ThreadId = Thread.CurrentThread.ManagedThreadId.ToString()
+            };
+
+            _channelManager.AddNewClient(client);
+        }
+
+        public void DeRegisterClient()
+        {
+            Client client = new Client
+            {
+                ThreadId = Thread.CurrentThread.ManagedThreadId.ToString()
+            };
+
+            _channelManager.RemoveClient(client);
+        }
+
+        public bool CanWrite()
+        {
+            if (_buffer == -1)
+            {
+                //infinite buffer size
+                return true;
+            }
+
+            if (_buffer > 0)
+            {
+                return _dataPool.Count < _buffer;
+            }
+
+            return false;
         }
 
         protected virtual void OnDataWritten(object sender, ChannelArgs<T> channelArgs)
@@ -152,11 +199,10 @@ namespace Channnel
         public void Dispose()
         {
             _dataPool = null;
-            DataWritten = null;
-            DataRead = null;
+            DeRegisterPrintDebugInfo();
         }
 
-        private void PrintDebugInfo()
+        private void RegisterPrintDebugInfo()
         {
             DataWritten += (sender, args) =>
             {
@@ -169,6 +215,11 @@ namespace Channnel
             };
         }
 
+        private void DeRegisterPrintDebugInfo()
+        {
+            DataWritten = null;
+            DataRead = null;
+        }
 
         #endregion
 

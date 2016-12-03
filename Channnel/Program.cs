@@ -5,8 +5,9 @@ namespace Channnel
 {
     class Program
     {
-        static readonly Channel<int> OddChannel = new Channel<int>("Odd Channel", true);
-        static readonly Channel<int> EvenChannel = new Channel<int>("Even Channel", true);
+        static readonly Channel<int> OddChannel = new Channel<int>("odd");
+
+        static readonly Channel<int> EvenChannel = new Channel<int>("even");
 
         private const int Limit = 7000;
 
@@ -29,10 +30,11 @@ namespace Channnel
 
         }
 
-       
-
         private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
+            oddChannel.RegisterClient(new ClientConfig { ReadOnly = true });
+            evenChannel.RegisterClient(new ClientConfig { WriteOnly = true });
+
             var lastSavedData = 0;
             var nextData = oddChannel.Read();
 
@@ -54,6 +56,9 @@ namespace Channnel
 
         private static void DoOddSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
+            oddChannel.RegisterClient(new ClientConfig { WriteOnly = true });
+            evenChannel.RegisterClient(new ClientConfig { ReadOnly = true });
+
             var nextData = 1;
             while (true)
             {
