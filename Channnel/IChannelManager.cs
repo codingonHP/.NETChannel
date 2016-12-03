@@ -2,10 +2,10 @@
 {
     public interface IChannelManager
     {
-        void AddNewClient(Client client);
-        void RemoveClient(Client client);
-        bool ClientExists(Client client);
-        InvocationScope GetClientInvocationScope(string clientId, InvocationScope invocationScope);
+        void AddNewClient(InvocationScope invocationScope);
+        void RemoveClient(string clientId);
+        bool ClientExists(string clientId);
+        InvocationScope GetClientInvocationScope(string clientId, string invocationScope);
         Client GetClient(string clientId);
     }
 }

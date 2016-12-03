@@ -32,8 +32,8 @@ namespace Channnel
 
         private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName  = "DoEvenSum", ReadOnly = true });
-            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoEvenSum", WriteOnly = true });
+            //oddChannel.RegisterClient(new InvocationScope { InvocationScopeName  = "DoEvenSum", ReadOnly = true });
+            //evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoEvenSum", WriteOnly = true });
 
             var lastSavedData = 0;
             var nextData = oddChannel.Read("DoEvenSum");
@@ -51,13 +51,19 @@ namespace Channnel
                 {
                     break;
                 }
+
+
+                //testing code
+                //oddChannel.Write(nextData, "DoEvenSum");
+                //nextData = evenChannel.Read("DoEvenSum");
+
             }
         }
 
         private static void DoOddSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", WriteOnly = true });
-            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", ReadOnly = true });
+            //oddChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", WriteOnly = true });
+            //evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", ReadOnly = true });
 
             var nextData = 1;
             while (true)
@@ -75,6 +81,10 @@ namespace Channnel
                 {
                     break;
                 }
+
+                //testing code
+                //oddChannel.Read("DoOddSum");
+                //evenChannel.Write(nextData, "DoOddSum");
             }
         }
     }

@@ -12,7 +12,7 @@ namespace Channnel
 
         private Queue<T> _dataPool = new Queue<T>();
         private readonly ChannelBehavior _channelBehavior;
-        private readonly ChannelManager _channelManager = new ChannelManager();
+        private ChannelManager _channelManager = new ChannelManager();
         #endregion
 
         #region Public
@@ -31,7 +31,7 @@ namespace Channnel
                 }
                 else
                 {
-                    DeRegisterPrintDebugInfo();
+                    UnRegisterPrintDebugInfo();
                 }
             }
         }
@@ -63,7 +63,7 @@ namespace Channnel
                                                    config.ChannelBehavior,
                                                    config.PrintDebugLogs)
         {
-            
+
         }
 
         public Channel() : this(name: string.Empty, buffer: 0, channelBehavior: ChannelBehavior.RemoveOnRead, printDebugLogs: false) { }
@@ -76,7 +76,7 @@ namespace Channnel
         public virtual T Read(string invocationScopeName)
         {
             var currentThread = Thread.CurrentThread;
-            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(),new InvocationScope { InvocationScopeName = invocationScopeName });
+            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
             if (!ChannelOpen)
             {
                 throw new InvalidOperationException("Reading from closed channel");
@@ -84,7 +84,7 @@ namespace Channnel
 
             if (thisClient?.WriteOnly == true)
             {
-                throw new InvalidOperationException("Cannot read from write only channel");
+                throw new InvalidOperationException($"Cannot read from write only channel from {invocationScopeName} invocation scope.");
             }
 
             T data = default(T);
@@ -116,7 +116,7 @@ namespace Channnel
         public void Write(T data, string invocationScopeName)
         {
             var currentThread = Thread.CurrentThread;
-            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), new InvocationScope {InvocationScopeName = invocationScopeName });
+            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
 
             if (!ChannelOpen)
             {
@@ -125,7 +125,7 @@ namespace Channnel
 
             if (thisClient?.ReadOnly == true)
             {
-                throw new InvalidOperationException("Cannot write to readonly channel");
+                throw new InvalidOperationException($"Cannot write to readonly channel from {invocationScopeName} invocation scope.");
             }
 
             if (CanWrite())
@@ -151,24 +151,13 @@ namespace Channnel
 
         public void RegisterClient(InvocationScope invocationScope)
         {
-            
-            Client client = new Client
-            {
-                InvocationScope = invocationScope,
-                ThreadId = Thread.CurrentThread.ManagedThreadId.ToString()
-            };
-
-            _channelManager.AddNewClient(client);
+            invocationScope.ThreadId = Thread.CurrentThread.ManagedThreadId.ToString();
+            _channelManager.AddNewClient(invocationScope);
         }
 
-        public void DeRegisterClient()
+        public void UnRegisterClient()
         {
-            Client client = new Client
-            {
-                ThreadId = Thread.CurrentThread.ManagedThreadId.ToString()
-            };
-
-            _channelManager.RemoveClient(client);
+            _channelManager.RemoveClient(Thread.CurrentThread.ManagedThreadId.ToString());
         }
 
         public bool CanWrite()
@@ -202,7 +191,8 @@ namespace Channnel
         public void Dispose()
         {
             _dataPool = null;
-            DeRegisterPrintDebugInfo();
+            _channelManager = null;
+            UnRegisterPrintDebugInfo();
         }
 
         private void RegisterPrintDebugInfo()
@@ -216,12 +206,33 @@ namespace Channnel
             {
                 Console.WriteLine($"Data {args.Operation} by {args.Name} ({args.SenderId}), data: {args.Data}");
             };
+
+            _channelManager.ClientAdded += (sender, args) =>
+            {
+                Console.WriteLine($"Client Added -> {args.InvocationScopes.Count}");
+                foreach (var invocationScope in args.InvocationScopes)
+                {
+                    Console.WriteLine($"{invocationScope.InvocationScopeName} - { invocationScope.ThreadId }");
+                }
+            };
+
+            _channelManager.ClientRemoved += (sender, args) =>
+            {
+                Console.WriteLine($"Client Removed -> {args.InvocationScopes.Count}");
+                foreach (var invocationScope in args.InvocationScopes)
+                {
+                    Console.WriteLine($"{invocationScope.InvocationScopeName} - { invocationScope.ThreadId }");
+                }
+            };
         }
 
-        private void DeRegisterPrintDebugInfo()
+        private void UnRegisterPrintDebugInfo()
         {
             DataWritten = null;
             DataRead = null;
+            _channelManager.ClientAdded -= null;
+            _channelManager.ClientRemoved -= null;
+
         }
 
         #endregion

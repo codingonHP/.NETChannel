@@ -50,6 +50,7 @@
     <Compile Include="ChannelConfig.cs" />
     <Compile Include="ChannelManager.cs" />
     <Compile Include="Client.cs" />
+    <Compile Include="ClientArgs.cs" />
     <Compile Include="IChannelManager.cs" />
     <Compile Include="InvocationScope.cs" />
     <Compile Include="Program.cs" />

@@ -9,55 +9,77 @@ namespace Channnel
         static readonly object LockSwitch = new object();
         readonly Dictionary<string, Client> _clientList = new Dictionary<string, Client>();
 
-        public void AddNewClient(Client client)
+        public event Action<object, ClientArgs> ClientAdded;
+        public event Action<object, ClientArgs> ClientRemoved;
+
+        public void AddNewClient(InvocationScope invocationScope)
         {
             lock (LockSwitch)
             {
-                var isConfigValid = ValidateClientConfig(client);
-                if (!ClientExists(client) && isConfigValid)
+                var isConfigValid = ValidateClientConfig(invocationScope);
+
+                if (!ClientExists(invocationScope.ThreadId) && isConfigValid)
                 {
-                    _clientList.Add(client.ThreadId, client);
+                    var client = new Client();
+                    client.InvocationScopes.Add(invocationScope);
+                    _clientList.Add(invocationScope.ThreadId, client);
+
+                    OnClientAdded(this, new ClientArgs
+                    {
+                        ClientId = invocationScope.ThreadId,
+                        InvocationScope = invocationScope,
+                        InvocationScopes = client.InvocationScopes
+                    });
+
+                    return;
                 }
 
                 if (!isConfigValid)
                 {
-                    throw new InvalidOperationException($"cannot add {nameof(client)}. Please check your client config");
+                    throw new InvalidOperationException($"cannot add new client. Please check your client config");
                 }
 
                 //client doesn't exist and configuration is also valid.
 
-                var savedClient = GetClient(client.ThreadId);
-                savedClient.InvocationScopes.Add(client.InvocationScope);
+                var savedClient = GetClient(invocationScope.ThreadId);
+                savedClient.InvocationScopes.Add(invocationScope);
+
+                OnClientAdded(this, new ClientArgs
+                {
+                    ClientId = invocationScope.ThreadId,
+                    InvocationScope = invocationScope,
+                    InvocationScopes = savedClient.InvocationScopes
+                });
             }
         }
 
-        public void RemoveClient(Client client)
+        public void RemoveClient(string clientId)
         {
             lock (LockSwitch)
             {
-                if (ClientExists(client))
+                if (ClientExists(clientId))
                 {
-                    _clientList.Remove(client.ThreadId);
+                    _clientList.Remove(clientId);
                 }
             }
         }
 
-        public bool ClientExists(Client client)
+        public bool ClientExists(string clientId)
         {
             lock (LockSwitch)
             {
-                return _clientList.ContainsKey(client.ThreadId);
+                return _clientList.ContainsKey(clientId);
             }
         }
 
-        public InvocationScope GetClientInvocationScope(string clientId, InvocationScope invocationScope)
+        public InvocationScope GetClientInvocationScope(string clientId, string invocationScope)
         {
             lock (LockSwitch)
             {
-                if (ClientExists(new Client { ThreadId = clientId }))
+                if (ClientExists(clientId))
                 {
                     var client = _clientList[clientId];
-                    return client.InvocationScopes.Single(s => s.InvocationScopeName == invocationScope.InvocationScopeName);
+                    return client.InvocationScopes.Single(s => s.InvocationScopeName == invocationScope);
                 }
 
                 return null;
@@ -68,7 +90,7 @@ namespace Channnel
         {
             lock (LockSwitch)
             {
-                if (ClientExists(new Client { ThreadId = clientId }))
+                if (ClientExists(clientId))
                 {
                     var client = _clientList[clientId];
                     return client;
@@ -78,15 +100,22 @@ namespace Channnel
             }
         }
 
-        public bool ValidateClientConfig(Client client)
+        public bool ValidateClientConfig(InvocationScope invocationScope)
         {
-            if (client.InvocationScope != null)
-            {
-                var scope = client.InvocationScope;
-                scope.ValidateSettings();
-            }
+            var scope = GetClientInvocationScope(invocationScope.ThreadId, invocationScope.InvocationScopeName);
+            scope?.ValidateSettings();
 
             return true;
+        }
+
+        protected virtual void OnClientAdded(object sender, ClientArgs clientArgs)
+        {
+            ClientAdded?.Invoke(sender, clientArgs);
+        }
+
+        protected virtual void OnClientRemoved(object sender, ClientArgs clientArgs)
+        {
+            ClientRemoved?.Invoke(sender, clientArgs);
         }
     }
 }
