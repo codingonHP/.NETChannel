@@ -7,8 +7,8 @@
     <ProjectGuid>{8DFB1148-2114-4FE0-8D42-4D3FE2EF6C2A}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Channnel</RootNamespace>
-    <AssemblyName>Channnel</AssemblyName>
+    <RootNamespace>Channel</RootNamespace>
+    <AssemblyName>Channel</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
