@@ -32,11 +32,11 @@ namespace Channnel
 
         private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName  = "odd channel only has readonly access for do even sum", ReadOnly = true });
-            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "odd channel only has write access for do even sum", WriteOnly = true });
+            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName  = "DoEvenSum", ReadOnly = true });
+            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoEvenSum", WriteOnly = true });
 
             var lastSavedData = 0;
-            var nextData = oddChannel.Read();
+            var nextData = oddChannel.Read("DoEvenSum");
 
             while (true)
             {
@@ -44,8 +44,8 @@ namespace Channnel
                 Console.WriteLine(nextData);
                 lastSavedData = nextData;
 
-                evenChannel.Write(nextData);
-                nextData = oddChannel.Read();
+                evenChannel.Write(nextData, "DoEvenSum");
+                nextData = oddChannel.Read("DoEvenSum");
 
                 if (nextData > Limit)
                 {
@@ -56,18 +56,18 @@ namespace Channnel
 
         private static void DoOddSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName = "odd channel only has write access for DoOddSum", WriteOnly = true });
-            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "odd channel only has read access for DoOddSum", ReadOnly = true });
+            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", WriteOnly = true });
+            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "DoOddSum", ReadOnly = true });
 
             var nextData = 1;
             while (true)
             {
                 Console.WriteLine(nextData);
 
-                oddChannel.Write(nextData);
+                oddChannel.Write(nextData, "DoOddSum");
                 var lastSavedData = nextData;
 
-                nextData = evenChannel.Read();
+                nextData = evenChannel.Read("DoOddSum");
                 nextData = lastSavedData + nextData;
 
 

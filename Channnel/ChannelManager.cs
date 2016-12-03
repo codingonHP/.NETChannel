@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Channnel
 {
@@ -26,7 +27,7 @@ namespace Channnel
                 //client doesn't exist and configuration is also valid.
 
                 var savedClient = GetClient(client.ThreadId);
-                savedClient.ClientConfig?.InvocationScopes.Add(client.InvocationScope);
+                savedClient.InvocationScopes.Add(client.InvocationScope);
             }
         }
 
@@ -56,7 +57,7 @@ namespace Channnel
                 if (ClientExists(new Client { ThreadId = clientId }))
                 {
                     var client = _clientList[clientId];
-                    return client.InvocationScope;
+                    return client.InvocationScopes.Single(s => s.InvocationScopeName == invocationScope.InvocationScopeName);
                 }
 
                 return null;
@@ -79,7 +80,7 @@ namespace Channnel
 
         public bool ValidateClientConfig(Client client)
         {
-            if (client.ClientConfig != null)
+            if (client.InvocationScope != null)
             {
                 var scope = client.InvocationScope;
                 scope.ValidateSettings();

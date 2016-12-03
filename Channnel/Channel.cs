@@ -73,10 +73,10 @@ namespace Channnel
         #endregion
 
         #region Methods
-        public virtual T Read()
+        public virtual T Read(string invocationScopeName)
         {
             var currentThread = Thread.CurrentThread;
-            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(),new InvocationScope());
+            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(),new InvocationScope { InvocationScopeName = invocationScopeName });
             if (!ChannelOpen)
             {
                 throw new InvalidOperationException("Reading from closed channel");
@@ -113,10 +113,10 @@ namespace Channnel
             return data;
         }
 
-        public void Write(T data)
+        public void Write(T data, string invocationScopeName)
         {
             var currentThread = Thread.CurrentThread;
-            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), new InvocationScope());
+            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), new InvocationScope {InvocationScopeName = invocationScopeName });
 
             if (!ChannelOpen)
             {
