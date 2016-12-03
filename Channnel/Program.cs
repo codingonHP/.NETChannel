@@ -5,9 +5,9 @@ namespace Channnel
 {
     class Program
     {
-        static readonly Channel<int> OddChannel = new Channel<int>("odd");
+        static readonly Channel<int> OddChannel = new Channel<int>(new ChannelConfig { Name = "odd", PrintDebugLogs = true });
 
-        static readonly Channel<int> EvenChannel = new Channel<int>("even");
+        static readonly Channel<int> EvenChannel = new Channel<int>(new ChannelConfig { Name = "even", PrintDebugLogs = true });
 
         private const int Limit = 7000;
 
@@ -32,8 +32,8 @@ namespace Channnel
 
         private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            oddChannel.RegisterClient(new ClientConfig { ReadOnly = true });
-            evenChannel.RegisterClient(new ClientConfig { WriteOnly = true });
+            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName  = "odd channel only has readonly access for do even sum", ReadOnly = true });
+            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "odd channel only has write access for do even sum", WriteOnly = true });
 
             var lastSavedData = 0;
             var nextData = oddChannel.Read();
@@ -56,8 +56,8 @@ namespace Channnel
 
         private static void DoOddSum(Channel<int> oddChannel, Channel<int> evenChannel)
         {
-            oddChannel.RegisterClient(new ClientConfig { WriteOnly = true });
-            evenChannel.RegisterClient(new ClientConfig { ReadOnly = true });
+            oddChannel.RegisterClient(new InvocationScope { InvocationScopeName = "odd channel only has write access for DoOddSum", WriteOnly = true });
+            evenChannel.RegisterClient(new InvocationScope { InvocationScopeName = "odd channel only has read access for DoOddSum", ReadOnly = true });
 
             var nextData = 1;
             while (true)

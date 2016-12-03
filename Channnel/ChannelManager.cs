@@ -22,6 +22,11 @@ namespace Channnel
                 {
                     throw new InvalidOperationException($"cannot add {nameof(client)}. Please check your client config");
                 }
+
+                //client doesn't exist and configuration is also valid.
+
+                var savedClient = GetClient(client.ThreadId);
+                savedClient.ClientConfig?.InvocationScopes.Add(client.InvocationScope);
             }
         }
 
@@ -44,14 +49,28 @@ namespace Channnel
             }
         }
 
-        public ClientConfig GetClientConfig(string clientId)
+        public InvocationScope GetClientInvocationScope(string clientId, InvocationScope invocationScope)
         {
             lock (LockSwitch)
             {
                 if (ClientExists(new Client { ThreadId = clientId }))
                 {
                     var client = _clientList[clientId];
-                    return client.ClientConfig;
+                    return client.InvocationScope;
+                }
+
+                return null;
+            }
+        }
+
+        public Client GetClient(string clientId)
+        {
+            lock (LockSwitch)
+            {
+                if (ClientExists(new Client { ThreadId = clientId }))
+                {
+                    var client = _clientList[clientId];
+                    return client;
                 }
 
                 return null;
@@ -62,8 +81,8 @@ namespace Channnel
         {
             if (client.ClientConfig != null)
             {
-                var c = client.ClientConfig;
-                c.ValidateSettings();
+                var scope = client.InvocationScope;
+                scope.ValidateSettings();
             }
 
             return true;

@@ -45,7 +45,7 @@ namespace Channnel
         #region Constructor
         public Channel(string name, int buffer, ChannelBehavior channelBehavior, bool printDebugLogs)
         {
-            _buffer = buffer;
+            _buffer = buffer == 0 ? 1 : buffer;
             _channelBehavior = channelBehavior;
 
             DebugInfo = printDebugLogs;
@@ -63,7 +63,7 @@ namespace Channnel
                                                    config.ChannelBehavior,
                                                    config.PrintDebugLogs)
         {
-           
+            
         }
 
         public Channel() : this(name: string.Empty, buffer: 0, channelBehavior: ChannelBehavior.RemoveOnRead, printDebugLogs: false) { }
@@ -75,7 +75,8 @@ namespace Channnel
         #region Methods
         public virtual T Read()
         {
-            var thisClient = _channelManager.GetClientConfig(Thread.CurrentThread.ManagedThreadId.ToString());
+            var currentThread = Thread.CurrentThread;
+            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(),new InvocationScope());
             if (!ChannelOpen)
             {
                 throw new InvalidOperationException("Reading from closed channel");
@@ -103,7 +104,7 @@ namespace Channnel
             var channelArgs = new ChannelArgs<T>
             {
                 Data = data,
-                SenderId = Thread.CurrentThread.ManagedThreadId.ToString(),
+                SenderId = currentThread.ManagedThreadId.ToString(),
                 Operation = "Read",
                 Name = Name
             };
@@ -114,7 +115,8 @@ namespace Channnel
 
         public void Write(T data)
         {
-            var thisClient = _channelManager.GetClientConfig(Thread.CurrentThread.ManagedThreadId.ToString());
+            var currentThread = Thread.CurrentThread;
+            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), new InvocationScope());
 
             if (!ChannelOpen)
             {
@@ -132,7 +134,7 @@ namespace Channnel
                 var channelArgs = new ChannelArgs<T>
                 {
                     Data = data,
-                    SenderId = Thread.CurrentThread.ManagedThreadId.ToString(),
+                    SenderId = currentThread.ManagedThreadId.ToString(),
                     Operation = "Write",
                     Name = Name
                 };
@@ -147,11 +149,12 @@ namespace Channnel
             Dispose();
         }
 
-        public void RegisterClient(ClientConfig config)
+        public void RegisterClient(InvocationScope invocationScope)
         {
+            
             Client client = new Client
             {
-                ClientConfig = config,
+                InvocationScope = invocationScope,
                 ThreadId = Thread.CurrentThread.ManagedThreadId.ToString()
             };
 

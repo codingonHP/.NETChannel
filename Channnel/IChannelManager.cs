@@ -5,6 +5,7 @@
         void AddNewClient(Client client);
         void RemoveClient(Client client);
         bool ClientExists(Client client);
-        ClientConfig GetClientConfig(string clientId);
+        InvocationScope GetClientInvocationScope(string clientId, InvocationScope invocationScope);
+        Client GetClient(string clientId);
     }
 }
