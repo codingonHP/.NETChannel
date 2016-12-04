@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Channel", "Channnel\Channel.csproj", "{8DFB1148-2114-4FE0-8D42-4D3FE2EF6C2A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChannelUnitTest", "ChannelUnitTest\ChannelUnitTest.csproj", "{25A91CDF-E2A6-47D6-BE84-1AD4DC31373A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{8DFB1148-2114-4FE0-8D42-4D3FE2EF6C2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8DFB1148-2114-4FE0-8D42-4D3FE2EF6C2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8DFB1148-2114-4FE0-8D42-4D3FE2EF6C2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25A91CDF-E2A6-47D6-BE84-1AD4DC31373A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25A91CDF-E2A6-47D6-BE84-1AD4DC31373A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25A91CDF-E2A6-47D6-BE84-1AD4DC31373A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25A91CDF-E2A6-47D6-BE84-1AD4DC31373A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

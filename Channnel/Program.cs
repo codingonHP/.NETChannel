@@ -5,9 +5,9 @@ namespace Channnel
 {
     class Program
     {
-        static readonly Channel<int> OddChannel = new Channel<int>(new ChannelConfig { Name = "odd", PrintDebugLogs = true });
+        static readonly Channel<int> OddChannel = new Channel<int>(new ChannelConfig { ChannelName = "odd", PrintDebugLogs = false });
 
-        static readonly Channel<int> EvenChannel = new Channel<int>(new ChannelConfig { Name = "even", PrintDebugLogs = true });
+        static readonly Channel<int> EvenChannel = new Channel<int>(new ChannelConfig { ChannelName = "even", PrintDebugLogs = false });
 
         private const int Limit = 7000;
 

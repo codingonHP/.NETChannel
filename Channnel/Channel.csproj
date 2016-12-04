@@ -49,6 +49,7 @@
     <Compile Include="ChannelBehavior.cs" />
     <Compile Include="ChannelConfig.cs" />
     <Compile Include="ChannelManager.cs" />
+    <Compile Include="ChannelOperation.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientArgs.cs" />
     <Compile Include="IChannelManager.cs" />

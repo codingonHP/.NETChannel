@@ -9,6 +9,7 @@ namespace Channnel
         #region Private
         private readonly int _buffer;
         private bool _debugInfo;
+        private static readonly object Lock = new object();
 
         private Queue<T> _dataPool = new Queue<T>();
         private readonly ChannelBehavior _channelBehavior;
@@ -18,6 +19,7 @@ namespace Channnel
         #region Public
         public string Name { get; set; }
         public bool DataAvailable { get; private set; }
+        public bool CanWrite { get; private set; }
         public bool ChannelOpen { get; private set; }
         public bool DebugInfo
         {
@@ -40,6 +42,9 @@ namespace Channnel
         #region Events
         public event Action<object, ChannelArgs<T>> DataWritten;
         public event Action<object, ChannelArgs<T>> DataRead;
+        public event Action<object, ChannelArgs<T>> WaitingToWrite;
+        public event Action<object, ChannelArgs<T>> WaitingToRead;
+
         #endregion
 
         #region Constructor
@@ -58,7 +63,7 @@ namespace Channnel
             }
         }
 
-        public Channel(ChannelConfig config) : this(config.Name,
+        public Channel(ChannelConfig config) : this(config.ChannelName,
                                                    config.Buffer,
                                                    config.ChannelBehavior,
                                                    config.PrintDebugLogs)
@@ -88,7 +93,20 @@ namespace Channnel
             }
 
             T data = default(T);
-            while (!DataAvailable) { /*wait here till data is available */ }
+
+            var channelArgs = new ChannelArgs<T>
+            {
+                SenderId = currentThread.ManagedThreadId.ToString(),
+                Operation = ChannelOperation.Read,
+                ChannelName = Name,
+                InvocationScopeName = invocationScopeName
+            };
+
+            while (!DataAvailable)
+            {
+                 /*wait here till data is available */
+                 OnWaitingToRead(this, channelArgs);
+            }
 
             switch (_channelBehavior)
             {
@@ -101,14 +119,10 @@ namespace Channnel
                     break;
             }
 
-            var channelArgs = new ChannelArgs<T>
-            {
-                Data = data,
-                SenderId = currentThread.ManagedThreadId.ToString(),
-                Operation = "Read",
-                Name = Name
-            };
+            channelArgs.Data = data;
+
             OnDataRead(this, channelArgs);
+            CanWrite = true;
 
             return data;
         }
@@ -128,17 +142,19 @@ namespace Channnel
                 throw new InvalidOperationException($"Cannot write to readonly channel from {invocationScopeName} invocation scope.");
             }
 
-            if (CanWrite())
+            var channelArgs = new ChannelArgs<T>
+            {
+                Data = data,
+                SenderId = currentThread.ManagedThreadId.ToString(),
+                Operation = ChannelOperation.Write,
+                ChannelName = Name,
+                InvocationScopeName = invocationScopeName
+            };
+
+            if (HaltTillWriteAllowed(channelArgs))
             {
                 _dataPool.Enqueue(data);
-                var channelArgs = new ChannelArgs<T>
-                {
-                    Data = data,
-                    SenderId = currentThread.ManagedThreadId.ToString(),
-                    Operation = "Write",
-                    Name = Name
-                };
-
+               
                 OnDataWritten(this, channelArgs);
             }
         }
@@ -161,32 +177,35 @@ namespace Channnel
             _channelManager.RemoveClient(Thread.CurrentThread.ManagedThreadId.ToString());
         }
 
-        public bool CanWrite()
+        public bool HaltTillWriteAllowed(ChannelArgs<T> channelArgs)
         {
-            if (_buffer == -1)
+            lock (Lock)
             {
-                //infinite buffer size
-                return true;
+                if (_buffer == -1)
+                {
+                    //infinite buffer size
+                    return true;
+                }
+
+                if (_buffer > 0)
+                {
+                    var bufStatus = _dataPool.Count < _buffer;
+                    if (bufStatus)
+                    {
+                        return true;
+                    }
+                }
             }
 
-            if (_buffer > 0)
+            while (!CanWrite)
             {
-                return _dataPool.Count < _buffer;
+                /* wait till write operation is allowed. */ 
+                OnWaitingToWrite(this, channelArgs);
             }
+
+            HaltTillWriteAllowed(channelArgs);
 
             return false;
-        }
-
-        protected virtual void OnDataWritten(object sender, ChannelArgs<T> channelArgs)
-        {
-            DataAvailable = _dataPool.Count > 0;
-            DataWritten?.Invoke(sender, channelArgs);
-        }
-
-        protected virtual void OnDataRead(object sender, ChannelArgs<T> channelArgs)
-        {
-            DataAvailable = _dataPool.Count > 0;
-            DataRead?.Invoke(sender, channelArgs);
         }
 
         public void Dispose()
@@ -200,12 +219,12 @@ namespace Channnel
         {
             DataWritten += (sender, args) =>
             {
-                Console.WriteLine($"Data {args.Operation} by {args.Name} ({args.SenderId}), data: {args.Data}");
+                Console.WriteLine($"Data {args.Operation} by {args.ChannelName} ({args.SenderId}), data: {args.Data}");
             };
 
             DataRead += (sender, args) =>
             {
-                Console.WriteLine($"Data {args.Operation} by {args.Name} ({args.SenderId}), data: {args.Data}");
+                Console.WriteLine($"Data {args.Operation} by {args.ChannelName} ({args.SenderId}), data: {args.Data}");
             };
 
             _channelManager.ClientAdded += (sender, args) =>
@@ -237,6 +256,35 @@ namespace Channnel
         }
 
         #endregion
+
+        #region EventInvocation
+
+        protected virtual void OnDataWritten(object sender, ChannelArgs<T> channelArgs)
+        {
+            DataAvailable = _dataPool.Count > 0;
+            DataWritten?.Invoke(sender, channelArgs);
+        }
+
+        protected virtual void OnDataRead(object sender, ChannelArgs<T> channelArgs)
+        {
+            DataAvailable = _dataPool.Count > 0;
+            DataRead?.Invoke(sender, channelArgs);
+        }
+
+        protected virtual void OnWaitingToWrite(object sender, ChannelArgs<T> args)
+        {
+            args.Operation = ChannelOperation.WriteWait;
+            WaitingToWrite?.Invoke(sender, args);
+        }
+
+        protected virtual void OnWaitingToRead(object sender, ChannelArgs<T> args)
+        {
+            args.Operation = ChannelOperation.ReadWait;
+            WaitingToRead?.Invoke(sender, args);
+        }
+
+        #endregion
+
 
     }
 }
