@@ -6,16 +6,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace ChannelUnitTest
 {
     [TestClass]
-    public class ChannelUnitTest
+    public class WaitForWriteIfCannelIsCurrentlyFullTest
     {
         static readonly Channel<int> OddChannel = new Channel<int>(new ChannelConfig { ChannelName = "odd", Buffer = 5});
-        static readonly Channel<int> EvenChannel = new Channel<int>(new ChannelConfig { ChannelName = "even", Buffer = 5});
 
         [TestMethod]
-        public void ChannelWithBuffer()
+        public void WaitForWriteIfCannelIsCurrentlyFull()
         {
             int aSenderId = 0;
-            int bSenderId;
 
             OddChannel.WaitingToWrite += (o, args) =>
             {
@@ -34,7 +32,6 @@ namespace ChannelUnitTest
 
             Task.Factory.StartNew(() =>
             {
-                bSenderId = Thread.CurrentThread.ManagedThreadId;
                 B();
             });
 

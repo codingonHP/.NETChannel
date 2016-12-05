@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Channnel
@@ -78,9 +79,11 @@ namespace Channnel
         #endregion
 
         #region Methods
-        public virtual T Read(string invocationScopeName)
+        public virtual T Read()
         {
             var currentThread = Thread.CurrentThread;
+            string invocationScopeName = GetInvocationScopeMethodName(2);
+
             var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
             if (!ChannelOpen)
             {
@@ -127,9 +130,11 @@ namespace Channnel
             return data;
         }
 
-        public void Write(T data, string invocationScopeName)
+        public void Write(T data)
         {
             var currentThread = Thread.CurrentThread;
+            string invocationScopeName = GetInvocationScopeMethodName(2);
+
             var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
 
             if (!ChannelOpen)
@@ -167,9 +172,12 @@ namespace Channnel
 
         public void ConfigureChannelUse(InvocationScope invocationScope)
         {
-            invocationScope.ValidateSettings();
-            invocationScope.ThreadId = Thread.CurrentThread.ManagedThreadId.ToString();
-            _channelManager.AddNewInvocationScope(invocationScope);
+            if (invocationScope != null)
+            {
+                invocationScope.ValidateSettings();
+                invocationScope.ThreadId = Thread.CurrentThread.ManagedThreadId.ToString();
+                _channelManager.AddNewInvocationScope(invocationScope);
+            }
         }
 
         public void RemoveChannelConfiguration()
@@ -255,6 +263,11 @@ namespace Channnel
 
         }
 
+        private static string GetInvocationScopeMethodName(int depth)
+        {
+            return new StackFrame(depth).GetMethod().Name;
+        }
+
         #endregion
 
         #region EventInvocation
@@ -284,7 +297,5 @@ namespace Channnel
         }
 
         #endregion
-
-
     }
 }
