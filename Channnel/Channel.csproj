@@ -52,6 +52,7 @@
     <Compile Include="ChannelOperation.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientArgs.cs" />
+    <Compile Include="Helpers.cs" />
     <Compile Include="IChannelManager.cs" />
     <Compile Include="InvocationScope.cs" />
     <Compile Include="Program.cs" />

@@ -1,8 +1,12 @@
 ﻿using System.Configuration;
-using System.Diagnostics;
+using Channel;
 
 namespace Channnel
 {
+    /// <summary>
+    /// Invocation scope name captures the point from where it is instantiated.
+    /// Always instantiate this from nearest use.
+    /// </summary>
     public class InvocationScope
     {
         public string ThreadId { get; set; }
@@ -13,7 +17,7 @@ namespace Channnel
         public InvocationScope()
         {
             //TODO : need to find a better way to handle this
-            InvocationScopeName = GetInvocationScopeMethodName(2);
+            InvocationScopeName = Helpers.GetInvocationScopeMethodName(2);
         }
 
         public bool ValidateSettings()
@@ -24,11 +28,6 @@ namespace Channnel
             }
 
             return true;
-        }
-
-        private static string GetInvocationScopeMethodName(int depth)
-        {
-            return new StackFrame(depth).GetMethod().Name;
         }
 
     }

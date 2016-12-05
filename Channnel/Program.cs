@@ -50,13 +50,10 @@ namespace Channnel
                 {
                     break;
                 }
-
-
-                //testing code
-                //oddChannel.Write(nextData, "DoEvenSum");
-                //nextData = evenChannel.Read("DoEvenSum");
-
             }
+
+            oddChannel.UnSubscribe();
+            evenChannel.UnSubscribe();
         }
 
         private static void DoOddSum(Channel<int> oddChannel, Channel<int> evenChannel)
@@ -80,11 +77,10 @@ namespace Channnel
                 {
                     break;
                 }
-
-                //testing code
-                //oddChannel.Read("DoOddSum");
-                //evenChannel.Write(nextData, "DoOddSum");
             }
+
+            oddChannel.UnSubscribe();
+            evenChannel.UnSubscribe();
         }
     }
 }

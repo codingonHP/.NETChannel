@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using Channel;
 
 namespace Channnel
 {
@@ -19,6 +20,8 @@ namespace Channnel
 
         #region Public
         public string Name { get; set; }
+        public string OwnerName { get; }
+        public int ChannelThreadId { get; }
         public bool DataAvailable { get; private set; }
         public bool CanWrite { get; private set; }
         public bool ChannelOpen { get; private set; }
@@ -38,6 +41,7 @@ namespace Channnel
                 }
             }
         }
+        public List<Client> SubscriberList { get; private set; }
         #endregion
 
         #region Events
@@ -54,15 +58,20 @@ namespace Channnel
             _buffer = buffer == 0 ? 1 : buffer;
             _channelBehavior = channelBehavior;
 
+            OwnerName = Helpers.GetInvocationScopeMethodName(2);
+            ChannelThreadId = Thread.CurrentThread.ManagedThreadId;
             DebugInfo = printDebugLogs;
             Name = name;
             ChannelOpen = true;
+            SubscriberList = new List<Client>();
 
             if (_channelBehavior == ChannelBehavior.ExpandChannelOnNeed)
             {
                 _buffer = -1;
             }
         }
+
+
 
         public Channel(ChannelConfig config) : this(config.ChannelName,
                                                    config.Buffer,
@@ -82,7 +91,7 @@ namespace Channnel
         public virtual T Read()
         {
             var currentThread = Thread.CurrentThread;
-            string invocationScopeName = GetInvocationScopeMethodName(2);
+            string invocationScopeName = Helpers.GetInvocationScopeMethodName(2);
 
             var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
             if (!ChannelOpen)
@@ -107,19 +116,22 @@ namespace Channnel
 
             while (!DataAvailable)
             {
-                 /*wait here till data is available */
-                 OnWaitingToRead(this, channelArgs);
+                /*wait here till data is available */
+                OnWaitingToRead(this, channelArgs);
             }
 
-            switch (_channelBehavior)
+            lock (Lock)
             {
-                case ChannelBehavior.RemoveOnRead:
-                    data = _dataPool.Dequeue();
-                    break;
+                switch (_channelBehavior)
+                {
+                    case ChannelBehavior.RemoveOnRead:
+                        data = _dataPool.Dequeue();
+                        break;
 
-                case ChannelBehavior.RetainOnRead:
-                    data = _dataPool.Peek();
-                    break;
+                    case ChannelBehavior.RetainOnRead:
+                        data = _dataPool.Peek();
+                        break;
+                }
             }
 
             channelArgs.Data = data;
@@ -133,7 +145,7 @@ namespace Channnel
         public void Write(T data)
         {
             var currentThread = Thread.CurrentThread;
-            string invocationScopeName = GetInvocationScopeMethodName(2);
+            string invocationScopeName = Helpers.GetInvocationScopeMethodName(2);
 
             var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
 
@@ -159,15 +171,20 @@ namespace Channnel
             if (HaltTillWriteAllowed(channelArgs))
             {
                 _dataPool.Enqueue(data);
-               
+
                 OnDataWritten(this, channelArgs);
             }
         }
 
         public virtual void Close()
         {
-            ChannelOpen = false;
-            Dispose();
+            if (Owner())
+            {
+                ChannelOpen = false;
+                Dispose();
+            }
+
+            throw new InvalidOperationException("Cannot dispose channel from non-owner thread");
         }
 
         public void ConfigureChannelUse(InvocationScope invocationScope)
@@ -176,6 +193,7 @@ namespace Channnel
             {
                 invocationScope.ValidateSettings();
                 invocationScope.ThreadId = Thread.CurrentThread.ManagedThreadId.ToString();
+                Subscibe();
                 _channelManager.AddNewInvocationScope(invocationScope);
             }
         }
@@ -183,6 +201,30 @@ namespace Channnel
         public void RemoveChannelConfiguration()
         {
             _channelManager.RemoveClient(Thread.CurrentThread.ManagedThreadId.ToString());
+        }
+
+        public void UnSubscribe()
+        {
+            if (AlreadySubscribed(3))
+            {
+                lock (Lock)
+                {
+                    var toRemove = SubscriberList.FirstOrDefault(s => s.ClientName.Equals(Helpers.GetInvocationScopeMethodName(4)));
+                    SubscriberList.Remove(toRemove);
+                    RemoveChannelConfiguration();
+                }
+            }
+        }
+
+        public void Subscibe()
+        {
+            lock (Lock)
+            {
+                if (!AlreadySubscribed(4))
+                {
+                    SubscriberList.Add(new Client());
+                }
+            }
         }
 
         public bool HaltTillWriteAllowed(ChannelArgs<T> channelArgs)
@@ -207,7 +249,7 @@ namespace Channnel
 
             while (!CanWrite)
             {
-                /* wait till write operation is allowed. */ 
+                /* wait till write operation is allowed. */
                 OnWaitingToWrite(this, channelArgs);
             }
 
@@ -218,9 +260,14 @@ namespace Channnel
 
         public void Dispose()
         {
-            _dataPool = null;
-            _channelManager = null;
-            UnRegisterPrintDebugInfo();
+            if (Owner())
+            {
+                _dataPool = null;
+                _channelManager = null;
+                UnRegisterPrintDebugInfo();
+            }
+
+            throw new InvalidOperationException("Cannot dispose channel from non-owner thread");
         }
 
         private void RegisterPrintDebugInfo()
@@ -263,11 +310,20 @@ namespace Channnel
 
         }
 
-        private static string GetInvocationScopeMethodName(int depth)
+        private bool Owner()
         {
-            return new StackFrame(depth).GetMethod().Name;
+            return ChannelThreadId == Thread.CurrentThread.ManagedThreadId;
         }
 
+        private bool AlreadySubscribed(int depth)
+        {
+            lock (Lock)
+            {
+                var lookUp = Helpers.GetInvocationScopeMethodName(depth);
+                return SubscriberList.FirstOrDefault(s => s.ClientName.Equals(lookUp)) !=
+                  null;
+            }
+        }
         #endregion
 
         #region EventInvocation
