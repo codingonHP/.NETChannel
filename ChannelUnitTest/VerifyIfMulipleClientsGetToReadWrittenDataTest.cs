@@ -44,25 +44,25 @@ namespace ChannelUnitTest
 
         private int B()
         {
-            var read = OddChannel.Read("B");
+            var read = OddChannel.Read();
             return read;
         }
 
         private int C()
         {
-            var read = OddChannel.Read("C");
+            var read = OddChannel.Read();
             return read;
         }
 
         private int D()
         {
-            var read = OddChannel.Read("D");
+            var read = OddChannel.Read();
             return read;
         }
 
         private void A()
         {
-            OddChannel.Write(1, "A");
+            OddChannel.Write(1);
         }
     }
 }

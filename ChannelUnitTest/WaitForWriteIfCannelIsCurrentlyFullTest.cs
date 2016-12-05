@@ -39,18 +39,18 @@ namespace ChannelUnitTest
 
         private void B()
         {
-            OddChannel.Write(0, "B");
-            OddChannel.Write(2, "B");
-            OddChannel.Write(4, "B");
+            OddChannel.Write(0);
+            OddChannel.Write(2);
+            OddChannel.Write(4);
         }
 
         private void A()
         {
-            OddChannel.Write(1, "A");
-            OddChannel.Write(3, "A");
+            OddChannel.Write(1);
+            OddChannel.Write(3);
 
             //wait to write 5
-            OddChannel.Write(5, "A");
+            OddChannel.Write(5);
         }
     }
 }

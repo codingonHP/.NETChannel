@@ -25,6 +25,10 @@ namespace Channnel
         public bool DataAvailable { get; private set; }
         public bool CanWrite { get; private set; }
         public bool ChannelOpen { get; private set; }
+        public T DataAvailableForRead { get; private set; }
+        public bool DataPristine { get; private set; }
+
+
         public bool DebugInfo
         {
             get { return _debugInfo; }
@@ -71,8 +75,6 @@ namespace Channnel
             }
         }
 
-
-
         public Channel(ChannelConfig config) : this(config.ChannelName,
                                                    config.Buffer,
                                                    config.ChannelBehavior,
@@ -118,6 +120,7 @@ namespace Channnel
             {
                 /*wait here till data is available */
                 OnWaitingToRead(this, channelArgs);
+                DataPristine = true;
             }
 
             lock (Lock)
@@ -125,7 +128,17 @@ namespace Channnel
                 switch (_channelBehavior)
                 {
                     case ChannelBehavior.RemoveOnRead:
-                        data = _dataPool.Dequeue();
+                        if (DataPristine)
+                        {
+                            DataAvailableForRead = _dataPool.Peek();
+                            DataPristine = false;
+                            data = _dataPool.Dequeue();
+                        }
+                        else
+                        {
+                            data = DataAvailableForRead;
+                        }
+
                         break;
 
                     case ChannelBehavior.RetainOnRead:
@@ -170,7 +183,10 @@ namespace Channnel
 
             if (HaltTillWriteAllowed(channelArgs))
             {
-                _dataPool.Enqueue(data);
+                lock (Lock)
+                {
+                    _dataPool.Enqueue(data);
+                }
 
                 OnDataWritten(this, channelArgs);
             }
@@ -193,7 +209,7 @@ namespace Channnel
             {
                 invocationScope.ValidateSettings();
                 invocationScope.ThreadId = Thread.CurrentThread.ManagedThreadId.ToString();
-                Subscibe();
+                Subscribe();
                 _channelManager.AddNewInvocationScope(invocationScope);
             }
         }
@@ -216,7 +232,7 @@ namespace Channnel
             }
         }
 
-        public void Subscibe()
+        public void Subscribe()
         {
             lock (Lock)
             {
@@ -333,6 +349,7 @@ namespace Channnel
             DataAvailable = _dataPool.Count > 0;
             DataWritten?.Invoke(sender, channelArgs);
         }
+
 
         protected virtual void OnDataRead(object sender, ChannelArgs<T> channelArgs)
         {
