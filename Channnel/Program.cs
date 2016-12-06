@@ -26,7 +26,6 @@ namespace Channnel
             });
 
             Console.ReadKey();
-
         }
 
         private static void DoEvenSum(Channel<int> oddChannel, Channel<int> evenChannel)
@@ -71,7 +70,6 @@ namespace Channnel
 
                 nextData = evenChannel.Read();
                 nextData = lastSavedData + nextData;
-
 
                 if (nextData > Limit)
                 {

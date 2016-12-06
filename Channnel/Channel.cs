@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Threading;
 using Channel;
@@ -27,8 +28,6 @@ namespace Channnel
         public bool ChannelOpen { get; private set; }
         public T DataAvailableForRead { get; private set; }
         public bool DataPristine { get; private set; }
-
-
         public bool DebugInfo
         {
             get { return _debugInfo; }
@@ -95,13 +94,13 @@ namespace Channnel
             var currentThread = Thread.CurrentThread;
             string invocationScopeName = Helpers.GetInvocationScopeMethodName(2);
 
-            var thisClient = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
+            var thisClientInvocationScope = _channelManager.GetClientInvocationScope(currentThread.ManagedThreadId.ToString(), invocationScopeName);
             if (!ChannelOpen)
             {
                 throw new InvalidOperationException("Reading from closed channel");
             }
 
-            if (thisClient?.WriteOnly == true)
+            if (thisClientInvocationScope?.WriteOnly == true)
             {
                 throw new InvalidOperationException($"Cannot read from write only channel from {invocationScopeName} invocation scope.");
             }
@@ -315,6 +314,16 @@ namespace Channnel
                     Console.WriteLine($"{invocationScope.InvocationScopeName} - { invocationScope.ThreadId }");
                 }
             };
+
+            WaitingToWrite += (o, args) =>
+            {
+                Console.WriteLine("Waiting to write");
+            };
+
+            WaitingToRead += (o, args) =>
+            {
+                Console.WriteLine("Waiting to read -> " + args.InvocationScopeName + " " + args.ChannelName + " " + args.Operation);
+            };
         }
 
         private void UnRegisterPrintDebugInfo()
@@ -346,6 +355,10 @@ namespace Channnel
 
         protected virtual void OnDataWritten(object sender, ChannelArgs<T> channelArgs)
         {
+            foreach (var subscriber in SubscriberList)
+            {
+                subscriber.Signal.DataAvailable = _dataPool.Count > 0;
+            }
             DataAvailable = _dataPool.Count > 0;
             DataWritten?.Invoke(sender, channelArgs);
         }
